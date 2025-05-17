@@ -718,7 +718,7 @@ public:
 			float dt = GetFrameTime();
 			spawnTimer += dt;
 
-		if (IsKeyPressed(KEY_T) && !adds.IsPaused()) {
+		if (IsKeyPressed(KEY_T) && !adds.IsPaused() && player->IsAlive()) {
 			adds.WatchAdd();
 			player->BuffHp(adds.GetHpBuff());
 		}
