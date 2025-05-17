@@ -1,0 +1,8 @@
+-Nowy tryb strzału - rakieta, detonuje sie przy trafieniu w komete lub można zdetonować przyciskiem E
+-Nowy tryb strzału - granaty, dostępne tylko dla postaci GMAIL, po określonym czasie wybuchaja i rozbijają się na 6 odłamków, odłamki te po określonym czasie też wybuchają
+-Funkcja reklam pod przyciskiem T -zatrzymuje gre i pozwala obejrzeć przez 5 sekund dwa obrazki, żeby dostać 20hp
+-Nowy przeciwnik - Geeble, asteroida z teksturą Geebla który obraca się wokół swojego środka, jest od teraz też domyślnym przeciwnikiem
+-Wszystkie asteroidy posiadają zdrowie zależne od ich rozmiaru
+-Nowe statki - Pibble, Washington, Gmail, różnią się zdrowiem i prędkością i teksturą. Gmail ma unikalny typ broni granaty dostępny tylko dla niego, wystrzeliwuje dwa granaty pod kątem 45 i -45 stopni.
+-Nowa tekstura przy śmierci statku
+-Nowe tło aplikacji
