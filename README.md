@@ -1,8 +1,15 @@
--Nowy tryb strzału - rakieta, detonuje sie przy trafieniu w komete lub można zdetonować przyciskiem E
--Nowy tryb strzału - granaty, dostępne tylko dla postaci GMAIL, po określonym czasie wybuchaja i rozbijają się na 6 odłamków, odłamki te po określonym czasie też wybuchają
--Funkcja reklam pod przyciskiem T -zatrzymuje gre i pozwala obejrzeć przez 5 sekund dwa obrazki, żeby dostać 20hp
--Nowy przeciwnik - Geeble, asteroida z teksturą Geebla który obraca się wokół swojego środka, jest od teraz też domyślnym przeciwnikiem
--Wszystkie asteroidy posiadają zdrowie zależne od ich rozmiaru
--Nowe statki - Pibble, Washington, Gmail, różnią się zdrowiem i prędkością i teksturą. Gmail ma unikalny typ broni granaty dostępny tylko dla niego, wystrzeliwuje dwa granaty pod kątem 45 i -45 stopni.
--Nowa tekstura przy śmierci statku
--Nowe tło aplikacji
+* **Rakieta (przycisk 'E'):** Detonuje się przy trafieniu w kometę lub może zostać zdetonowana ręcznie przyciskiem `E`.
+* **Granaty (tylko dla statku Gmail):** Po wystrzeleniu wybuchają po określonym czasie, rozpadając się na 6 odłamków. Te odłamki również wybuchają po krótkim czasie. Statek Gmail wystrzeliwuje dwa granaty jednocześnie pod kątami 45 i -45 stopni.
+
+* **Reklamy (przycisk 'T'):** Naciśnięcie przycisku `T` zatrzymuje grę i wyświetla dwa obrazki reklamowe przez 5 sekund. Za obejrzenie reklam gracz otrzymuje 20 punktów zdrowia.
+
+* **Geeble:** Nowy domyślny przeciwnik. Jest to asteroida z teksturą Geebla, która obraca się wokół własnej osi.
+* 
+* Wszystkie asteroidy posiadają teraz zdrowie skalowane w zależności od ich rozmiaru.
+
+* **Pibble:** Nowy statek o unikalnych statystykach zdrowia i prędkości oraz własnej teksturze.
+* **Washington:** Nowy statek o unikalnych statystykach zdrowia i prędkości oraz własnej teksturze.
+* **Gmail:** Nowy statek o unikalnych statystykach zdrowia i prędkości oraz własnej teksturze. Posiada ekskluzywny tryb strzału - granaty.
+
+* Dodano nową teksturę wyświetlaną w momencie śmierci statku gracza.
+* Zmieniono tło aplikacji na nowe.
