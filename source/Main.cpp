@@ -254,7 +254,7 @@ static inline std::unique_ptr<Asteroid> MakeAsteroid(int w, int h, AsteroidShape
 }
 
 // --- PROJECTILE HIERARCHY ---
-enum class WeaponType { LASER, BULLET, MISSILE,GRENADES,SHRAPNEL, COUNT};
+enum class WeaponType { LASER, BULLET, MISSILE,GRENADES,SHRAPNEL,EXMISSILE, EXPLOSION, COUNT};
 
 class Projectile {
 public:
@@ -264,13 +264,8 @@ public:
 		physics.velocity = vel;
 		baseDamage = dmg;
 		type = wt;
-		exploded = false;
-		explodeTime = 2.0f;
-		lifetime = 0.0f;
-		shrapnel = false;
-		if (type == WeaponType::SHRAPNEL) {
-			shrapnel = true;
-		}
+		explodeRadius = 50.0f;
+		time = 0.0f;
 		if (!TextureLoaded) {
 			textureMissile = LoadTexture("spark_flame.png");
 			TextureLoaded = true;
@@ -279,16 +274,11 @@ public:
 
 	bool Update(float dt) {
 		transform.position = Vector2Add(transform.position, Vector2Scale(physics.velocity, dt));
-		if (exploded)
-		{
-		explodeTime += 100*dt;
-		lifetime += dt;
+		if (type == WeaponType::GRENADES|| type == WeaponType::SHRAPNEL || type == WeaponType::EXPLOSION) {
+			time += dt;
 		}
-		if (type == WeaponType::GRENADES || type == WeaponType::SHRAPNEL) {
-			lifetime += dt;
-			if (lifetime >= 30.0*dt) {
-				explode();
-			}
+		else if (type == WeaponType::EXMISSILE) {
+			explodeRadius = explodeRadius + 60*dt;
 		}
 		if (transform.position.x < 0 ||
 			transform.position.x > Renderer::Instance().Width() ||
@@ -300,34 +290,8 @@ public:
 		return false;
 	}
 
-	void explode() {
-		if (!exploded && type == WeaponType::MISSILE) {
-			explodeTime = 5.0f;
-			lifetime = 0.0f;
-			physics.velocity = { 0.0f, 0.0f };
-			exploded = true;
-		}else if (type == WeaponType::GRENADES || type == WeaponType::SHRAPNEL) {
-			physics.velocity = { 0.0f, 0.0f };
-			exploded = true;
-			explodeTime = 45.0f;
-		}
-	}
-	WeaponType split() const {
-			return WeaponType::SHRAPNEL;
-	}
-
-	bool IsShard() const {
-		return shrapnel;
-	}
-
-	bool checkexplosion() const {
-		return exploded;
-	}
-	float getlifetime() const {
-		return lifetime;
-	}
-
 	void Draw() const {
+		Rectangle source = { 9.0f, 9.0f, static_cast<float>(textureMissile.width)-18.0f, static_cast<float>(textureMissile.height)-18.0f };
 		if (type == WeaponType::BULLET) {
 			DrawCircleV(transform.position, 5.f, WHITE);
 		}
@@ -336,10 +300,10 @@ public:
 			Rectangle lr = { transform.position.x - 2.f, transform.position.y - LASER_LENGTH, 4.f, LASER_LENGTH };
 			DrawRectangleRec(lr, RED);
 		}
-		else if(type == WeaponType::GRENADES && !exploded) {
+		else if(type == WeaponType::GRENADES ) {
 			DrawCircleV(transform.position, 5.f, GREEN);
 		}
-		else if (type == WeaponType::MISSILE && !exploded)
+		else if (type == WeaponType::MISSILE )
 		{
 				static constexpr float MISSILE_LENGTH = 20.f;
 				DrawTriangle(
@@ -349,17 +313,20 @@ public:
 					BLUE
 				);
 		}
-		else if (shrapnel && !exploded) {
+		else if (type == WeaponType::SHRAPNEL) {
 			DrawCircleV(transform.position, 5.f, RED);
 		}
-		else if(exploded){
-			Vector2 explosionradius = {
-				transform.position.x -explodeTime * 2.5f,
-				transform.position.y -explodeTime *2.5f 
-			};
-			DrawTextureEx(textureMissile, explosionradius, 0.0f, explodeTime*0.04f, WHITE);
+		else if (type == WeaponType::EXMISSILE) {
+			Rectangle dest = { transform.position.x , transform.position.y , GetRadius() *2, GetRadius() * 2 };
+			Vector2 origin = { GetRadius(), GetRadius() };
+			DrawTexturePro(textureMissile, source, dest, origin, 0.0f, WHITE);
 		}
+		else if (type == WeaponType::EXPLOSION) {
 
+			Rectangle dest = { transform.position.x , transform.position.y , GetRadius() * 2, GetRadius() * 2 };
+			Vector2 origin = { GetRadius(), GetRadius() };
+			DrawTexturePro(textureMissile, source, dest, origin, 0.0f, WHITE);
+		}
 	}
 	Vector2 GetPosition() const {
 		return transform.position;
@@ -372,11 +339,17 @@ public:
 		else if (type == WeaponType::BULLET) {
 			return 2.0f;
 		}
-		else if (type == WeaponType::MISSILE && exploded == false) {
+		else if (type == WeaponType::MISSILE) {
 			return 5.0f;
 		}
-		else if (type == WeaponType::MISSILE && exploded == true) {
-			return explodeTime;
+		else if (type == WeaponType::GRENADES) {
+			return 5.0f;
+		}
+		else if (type == WeaponType::EXMISSILE) {
+			return explodeRadius;
+		}
+		else if (type == WeaponType::EXPLOSION) {
+			return 80.0f;
 		}
 		else return 5.0f;
 
@@ -385,15 +358,16 @@ public:
 	int GetDamage() const {
 		return baseDamage;
 	}
+	float GetTime() const {
+		return time;
 
+	}
 	WeaponType GetWeaponType() const { 
 		return type;
 	}
 private:
-	bool shrapnel;
-	float lifetime;
-	bool exploded;
-	float explodeTime;
+	float time = 0.0f;
+	float explodeRadius;
 	TransformA transform;
 	Physics    physics;
 	int        baseDamage;
@@ -406,40 +380,34 @@ private:
 bool Projectile::TextureLoaded = false;
 Texture Projectile::textureMissile = { 0 };
 
-inline static std::vector<Projectile> MakeProjectile(WeaponType wt, const Vector2 pos, float speed)
+inline static Projectile MakeProjectile(WeaponType wt, const Vector2 pos, Vector2 speed)
 {	
-	std::vector<Projectile> projectiles;
-	Vector2 vel{ 0.0f, -speed };
-
 	if (wt == WeaponType::LASER) {
-		 projectiles.emplace_back(pos, vel, 20, wt);
+		return Projectile(pos, speed, 20, wt);
 	}
 	else if(wt == WeaponType::BULLET){
-		 projectiles.emplace_back(pos, vel, 10, wt);
+		return Projectile(pos, speed, 10, wt);
 	}
 	else if (wt == WeaponType::MISSILE) {
-		 projectiles.emplace_back(pos, vel, 45, wt);
+		return Projectile(pos, speed, 20, wt);
 	}
 	else if (wt == WeaponType::GRENADES) {
-		constexpr float angle = PI / 4.0f;
-		Vector2 vel1{ -cosf(angle) * speed, sinf(-angle) * speed };
-		Vector2 vel2{ cosf(angle)* speed, -sinf(+angle)* speed };
-		projectiles.emplace_back(pos, vel1, 30, wt);
-		projectiles.emplace_back(pos, vel2, 30, wt);
+		return Projectile(pos, speed, 20, wt);
 	}
 	else if (wt == WeaponType::SHRAPNEL) {
-		constexpr int shards = 6;
-		constexpr float angleStep = 2.0f * PI / shards; 
-		constexpr float baseAngle = -PI / 2.0f;          
-		for (int i = 0; i < shards; ++i) {
-			float angle = baseAngle + i * angleStep;
-			Vector2 vel3{ cosf(angle) * speed, sinf(angle) * speed };
-			projectiles.emplace_back(pos, vel3, 30, WeaponType::SHRAPNEL);
-		}
+		return Projectile(pos, speed, 20, wt);
 	}
-	return projectiles;
+	else if (wt == WeaponType::EXPLOSION) {
+		return Projectile(pos, speed, 20, wt);
+	}
+	else if (wt == WeaponType::EXMISSILE) {
+		return Projectile(pos, speed, 20, wt);
+	}
+	else {
+		return Projectile(pos, speed, 20, wt);
 
-}
+	}
+	}
 
 // --- SHIP HIERARCHY ---
 class Ship {
@@ -459,11 +427,16 @@ public:
 		fireRateMissile = 3.0f;
 		fireRateGrenades = 3.0f;
 		fireRateShrapnel = 4.0f;
+		fireRateExMissile = 1.0f;
+		fireRateExplosion = 1.0f;
+
 		spacingLaser = 40.f; // px between lasers
 		spacingBullet = 20.f;
 		spacingMissile = 100.f;
 		spacingGrenades = 100.0f;
 		spacingShrapnel = 80.0f;
+		spacingExMissile = 100.0f;
+		spacingExplosion = 100.0f;
 	}
 	virtual ~Ship() = default;
 	virtual void Update(float dt) = 0;
@@ -507,6 +480,12 @@ public:
 		else if (wt == WeaponType::SHRAPNEL) {
 			return fireRateShrapnel;
 		}
+		else if (wt == WeaponType::EXMISSILE) {
+			return fireRateExMissile; //
+		}
+		else if (wt == WeaponType::EXPLOSION) {
+			return fireRateShrapnel; //
+		}
 		else return 5.0f;
 	}
 
@@ -526,6 +505,12 @@ public:
 		else if (wt == WeaponType::SHRAPNEL) {
 			return spacingShrapnel;
 		}
+		else if (wt == WeaponType::EXMISSILE) {
+			return spacingExMissile;
+		}
+		else if (wt == WeaponType::EXPLOSION) {
+			return spacingExplosion;
+		}
 		else return 100.0f;
 	}
 
@@ -539,11 +524,16 @@ protected:
 	float      fireRateMissile;
 	float		fireRateGrenades;
 	float		fireRateShrapnel;
+	float fireRateExMissile;
+	float fireRateExplosion;
+
 	float      spacingLaser;
 	float      spacingBullet;
 	float	  spacingMissile;
 	float		spacingGrenades;
 	float		spacingShrapnel;
+	float	spacingExMissile;
+	float	spacingExplosion;
 };
 
 class PlayerShip :public Ship {
@@ -641,14 +631,14 @@ public:
 		UnloadTexture(image2);
 	}
 
-	int GetHpBuff() {
+	int GetHpBuff() const {
 		return hpBuff;
 	}
 	void WatchAdd() {
 		timer = 0;
 		paused = true;
 	}
-	bool IsPaused() {
+	bool IsPaused() const{
 		return paused;
 	}
 	void Update(float dt) {
@@ -659,28 +649,21 @@ public:
 			}
 		}
 	}
-	void Draw(int w, int h) {
+	void Draw(int w, int h) const{
 		if (!paused) return;
-		float scale;
+		Texture2D currentImage;
 		if (timer < maxTime * 0.5f) {
-
-			float scaleW = static_cast<float>(w) / image1.width;
-			float scaleH = static_cast<float>(h) / image1.height;
-			if (scaleW > scaleH) {
-				scale = scaleH;
-			}
-			else  scale = scaleW;
-			DrawTextureEx(image1, { 0,0 }, 0, scale, WHITE);
+			currentImage = image1;
 		}
 		else {
-			float scaleW = static_cast<float>(w) / image2.width;
-			float scaleH = static_cast<float>(h) / image2.height;
-			if (scaleW > scaleH) {
-				scale = scaleH;
-			}
-			else  scale = scaleW;
-			DrawTextureEx(image2, { 0, 0 }, 0, scale, WHITE);
+			currentImage = image2;
 		}
+		Rectangle source = { 0, 0, static_cast<float>(currentImage.width), static_cast<float>(currentImage.height) };
+		Rectangle dest = { 0 , 0,static_cast<float>(w), static_cast<float>(h) };
+		Vector2 origin = { 0, 0 };
+		DrawTexturePro(currentImage, source, dest, origin, 0.0f, WHITE);
+		DrawText(TextFormat("Reklama"),
+			10, 40, 20, BLUE);
 	}
 private:
 	const int hpBuff = 20;
@@ -742,6 +725,7 @@ public:
 				spawnTimer = 0.f;
 				spawnInterval = Utils::RandomFloat(C_SPAWN_MIN, C_SPAWN_MAX);
 				currentCharacter = Character::PIBBLE;
+				currentWeapon = WeaponType::LASER;
 			}
 			// Asteroid shape switch
 			if (IsKeyPressed(KEY_ONE)) {
@@ -762,7 +746,7 @@ public:
 
 			// Weapon switch
 			if (IsKeyPressed(KEY_TAB) && currentCharacter != Character::GMAIL) {
-				currentWeapon = static_cast<WeaponType>((static_cast<int>(currentWeapon) + 1) % (static_cast<int>(WeaponType::COUNT) - 2));
+				currentWeapon = static_cast<WeaponType>((static_cast<int>(currentWeapon) + 1) % (static_cast<int>(WeaponType::COUNT) - 4));
 			}
 
 			//Change charracter
@@ -783,6 +767,8 @@ public:
 			// Shooting
 			{
 				if (player->IsAlive() && IsKeyDown(KEY_SPACE)) {
+
+					Vector2 vel = {};
 					shotTimer += dt;
 					float interval = 1.f / player->GetFireRate(currentWeapon);
 					float projSpeed = player->GetSpacing(currentWeapon) * player->GetFireRate(currentWeapon);
@@ -790,13 +776,17 @@ public:
 					while (shotTimer >= interval) {
 						Vector2 p = player->GetPosition();
 						p.y -= player->GetRadius();
-						if (currentWeapon == WeaponType::GRENADES) {
-							std::vector<Projectile> grenade1 = MakeProjectile(currentWeapon, p, projSpeed);
-							projectiles.insert(projectiles.end(), grenade1.begin(), grenade1.end());
+						if (currentWeapon != WeaponType::GRENADES)
+						{
+							vel = { 0, -projSpeed };
+							projectiles.push_back(MakeProjectile(currentWeapon, p, vel));
 						}
-						else {
-							std::vector<Projectile> newbullet = MakeProjectile(currentWeapon, p, projSpeed);
-							projectiles.insert(projectiles.end(), newbullet.begin(), newbullet.end());
+						else 
+						{
+							vel = { -cosf(PI / 4) * projSpeed, -sinf(PI / 4) * projSpeed };
+							projectiles.push_back(MakeProjectile(currentWeapon, p, vel));
+							Vector2 vel2 = { cosf(PI / 4) * projSpeed, -sinf(PI / 4) * projSpeed };
+							projectiles.push_back(MakeProjectile(currentWeapon, p, vel2));
 						}
 						shotTimer -= interval;
 					}
@@ -808,28 +798,8 @@ public:
 						shotTimer = fmodf(shotTimer, maxInterval);
 					}
 				}
+			}
 
-				if (IsKeyPressed(KEY_E))
-				{
-					for (int i = 0; i < projectiles.size(); i++)
-					{
-						if (projectiles[i].GetWeaponType() == WeaponType::MISSILE)
-						{
-							projectiles[i].explode();
-						}
-					}
-				}
-			}
-			// Detonating
-			if (IsKeyPressed(KEY_E))
-			{
-				for (int i = 0; i < projectiles.size(); i++)
-				{
-					if (projectiles[i].GetWeaponType() == WeaponType::MISSILE) {
-						projectiles[i].explode();
-					}
-				}
-			}
 			// Spawn asteroids
 			if (spawnTimer >= spawnInterval && asteroids.size() < MAX_AST) {
 				asteroids.push_back(MakeAsteroid(C_WIDTH, C_HEIGHT, currentShape));
@@ -850,51 +820,59 @@ public:
 			for (auto pit = projectiles.begin(); pit != projectiles.end();) {
 				bool removed = false;
 
-				if ((*pit).getlifetime() >= 50 * dt) {
+				if (IsKeyPressed(KEY_E)) {
+					if (pit->GetWeaponType() == WeaponType::MISSILE) {
+						projectiles.push_back(MakeProjectile(WeaponType::EXMISSILE, (*pit).GetPosition(), { 0.0f, 0.0f }));
+						pit = projectiles.erase(pit);
+						removed = true;
+						continue;
+					}
+				}
+				else if ((*pit).GetWeaponType() == WeaponType::GRENADES && (*pit).GetTime() >= 40 * dt) {
+					for (int i = 0; i < shrapnel; i++) {
+						float angle = 0.0f;
+						angle = (2 * PI / shrapnel) * i;
+						float projSpeed = player->GetSpacing(currentWeapon) * player->GetFireRate(currentWeapon);
+						Vector2 vel = { cosf(angle) * projSpeed, sinf(angle) * projSpeed };
+						projectiles.push_back(MakeProjectile(WeaponType::SHRAPNEL, (*pit).GetPosition(), vel));
+					}
+					projectiles.push_back(MakeProjectile(WeaponType::EXPLOSION, (*pit).GetPosition(), { 0.0f, 0.0f }));
 					pit = projectiles.erase(pit);
 					removed = true;
-					break;
+					continue;
 				}
-
-				if ((*pit).GetWeaponType() == WeaponType::GRENADES && (*pit).checkexplosion()) {
-					Vector2 p = (*pit).GetPosition();
-					float projSpeed = player->GetSpacing(currentWeapon) * player->GetFireRate(currentWeapon);
-					removed = true;
-					std::vector<Projectile> shrapnel1 = MakeProjectile((*pit).split(), p, projSpeed);
-					projectiles.insert(projectiles.end(), shrapnel1.begin(), shrapnel1.end());
+				else if ((*pit).GetWeaponType() == WeaponType::SHRAPNEL && (*pit).GetTime() >= 40 * dt) {
+					projectiles.push_back(MakeProjectile(WeaponType::EXPLOSION, (*pit).GetPosition(), { 0.0f, 0.0f }));
 					pit = projectiles.erase(pit);
-					break;
+					removed = true;
+					continue;
 				}
-
+				else if ((*pit).GetWeaponType() == WeaponType::EXMISSILE && (*pit).GetRadius() >= 150.0f) {
+					pit = projectiles.erase(pit);
+					removed = true;
+					continue;
+				}
+				else if ((*pit).GetWeaponType() == WeaponType::EXPLOSION && (*pit).GetTime() >= 5 * dt) {
+					pit = projectiles.erase(pit);
+					removed = true;
+					continue;
+				}
 				for (auto ait = asteroids.begin(); ait != asteroids.end(); ++ait) {
 					float dist = Vector2Distance((*pit).GetPosition(), (*ait)->GetPosition());
 
-
 					if (dist < (*pit).GetRadius() + (*ait)->GetRadius()) {
-
 						(*ait)->TakeDamage((*pit).GetDamage());
+						if (pit->GetWeaponType() == WeaponType::MISSILE) {
+							projectiles.push_back(MakeProjectile(WeaponType::EXMISSILE, (*pit).GetPosition(), { 0.0f, 0.0f }));
+						}
 						if (!(*ait)->IsAlive())
 						{
 							ait = asteroids.erase(ait);
-						}
 
-						if ((*pit).checkexplosion() == 0 && (*pit).GetWeaponType() == WeaponType::MISSILE) {
-							(*pit).explode();
-							break;
 						}
-						else if ((*pit).checkexplosion() == 0) {
-							pit = projectiles.erase(pit);
-							removed = true;
-							break;
-						}
-						else {
-							if ((*pit).checkexplosion() == 1)
-							{
-								pit = projectiles.erase(pit);
-								removed = true;
-							}
-							break;
-						}
+						pit = projectiles.erase(pit);
+						removed = true;
+						break;
 					}
 				}
 
@@ -977,6 +955,7 @@ private:
 	AsteroidShape currentShape = AsteroidShape::GEEBLE;
 	Character currentCharacter = Character::PIBBLE;
 
+	static constexpr int shrapnel = 6;
 	static constexpr int C_WIDTH = 800;
 	static constexpr int C_HEIGHT = 800;
 	static constexpr size_t MAX_AST = 150;
